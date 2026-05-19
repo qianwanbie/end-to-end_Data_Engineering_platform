@@ -1,4 +1,4 @@
 scan_type,row_count,time_seconds
-full,997,0.334
-pruned,344,0.166
-speedup,2.0125396759254603,
+full,992,0.150
+pruned,336,0.121
+speedup,1.2391571918248,

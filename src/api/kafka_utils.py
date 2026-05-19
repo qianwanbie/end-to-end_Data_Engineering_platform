@@ -26,18 +26,18 @@ def get_producer():
 
 
 def get_latest_consumer(sensor_type):
-    """Return a consumer positioned to read the latest message for a sensor type."""
+    """Return the latest message for a sensor type by scanning from near the
+    end of each partition."""
     consumer = KafkaConsumer(
         TOPIC,
         bootstrap_servers=BOOTSTRAP_SERVERS.split(","),
         key_deserializer=lambda k: k.decode("utf-8") if k else None,
         value_deserializer=lambda v: json.loads(v.decode("utf-8")),
-        auto_offset_reset="latest",
+        auto_offset_reset="earliest",
         enable_auto_commit=False,
         consumer_timeout_ms=5000,
     )
-    # Poll to get assignment, then seek to end and step back one per partition
-    consumer.poll(timeout_ms=1000)
+    consumer.poll(timeout_ms=2000)
     partitions = consumer.assignment()
     if not partitions:
         consumer.close()
@@ -45,23 +45,29 @@ def get_latest_consumer(sensor_type):
 
     end_offsets = consumer.end_offsets(partitions)
     found = None
-    for tp, end_offset in end_offsets.items():
-        if end_offset > 0:
-            consumer.seek(tp, max(0, end_offset - 1))
-            # Find the latest message matching sensor_type
-            for _ in range(50):  # search back at most 50 messages
-                records = consumer.poll(timeout_ms=1000, max_records=10)
-                for _, msgs in records.items():
-                    for msg in reversed(msgs):
-                        if msg.value and msg.value.get("sensor") == sensor_type:
+    found_ts = 0
+
+    for tp in partitions:
+        end_offset = end_offsets.get(tp, 0)
+        if end_offset == 0:
+            continue
+        start_offset = max(0, end_offset - 200)
+        consumer.seek(tp, start_offset)
+
+        exhausted = False
+        while not exhausted:
+            records = consumer.poll(timeout_ms=2000, max_records=200)
+            exhausted = True
+            for _, msgs in records.items():
+                if msgs:
+                    exhausted = False
+                for msg in msgs:
+                    if msg.value and msg.value.get("sensor") == sensor_type:
+                        ts = msg.value.get("timestamp", 0)
+                        if ts > found_ts:
+                            found_ts = ts
                             found = msg.value
-                            break
-                    if found:
-                        break
-                if found:
-                    break
-            if found:
-                break
+
     consumer.close()
     return found
 

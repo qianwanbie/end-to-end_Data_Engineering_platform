@@ -88,14 +88,15 @@ python src/producer.py --count 1000 --rate 100 --source site-A-rack-12
 
 **5. Run the Spark streaming pipeline** (in a separate terminal)
 ```bash
-spark-submit \
-  --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.3 \
-  src/spark_pipeline.py
+# If spark-submit is available:
+#   spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.3 src/spark_pipeline.py
+# Otherwise, run directly with Python (the Kafka connector is configured in-code):
+python src/spark_pipeline.py
 ```
 
 **6. Run analytical queries** (after pipeline has processed data)
 ```bash
-spark-submit src/analytics.py
+python src/analytics.py
 ```
 
 **7. Start the REST API** (in a separate terminal)
