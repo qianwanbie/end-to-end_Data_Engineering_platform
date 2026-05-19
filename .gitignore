@@ -1,9 +1,5 @@
 __pycache__/
 *.pyc
-outputs/analytics/*
-!outputs/analytics/.gitkeep
-outputs/screenshots/*
-!outputs/screenshots/.gitkeep
 /datalake/
 /tmp/
 .spark-checkpoints/
